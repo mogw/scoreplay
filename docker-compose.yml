@@ -1,0 +1,38 @@
+version: '1.0'
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - elasticsearch
+    environment:
+      - DATABASE_URL=postgres://scoreplay:password@db:5432/scoreplay?sslmode=disable
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    entrypoint: >
+      sh -c "/app/wait-for-it.sh db:5432 -- /app/wait-for-it.sh elasticsearch:9200 -- ./scoreplay"
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: scoreplay
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: scoreplay
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+
+volumes:
+  pgdata:
